@@ -1,0 +1,4 @@
+interface:
+  display_name: "MEGA BOOST Onboarding"
+  short_description: "Audit a BOOST workbook and build its country ETL"
+  default_prompt: "Use $mega-boost-onboarding to audit this BOOST workbook and implement the country pipeline."

@@ -1,0 +1,28 @@
+{
+  "country": "Exampleland",
+  "expected_stages": ["Approved", "Executed"],
+  "minimum_rules_per_stage": 1,
+  "expected_codes_by_stage": {
+    "Approved": ["<approved-tag-code-1>", "<approved-tag-code-2>"],
+    "Executed": ["<executed-tag-code-1>", "<executed-tag-code-2>"]
+  },
+  "subnational_code_patterns": ["_SBN_", "^SBN_"],
+  "ranges": [
+    {
+      "name": "all-years",
+      "input": "raw.csv",
+      "format": "csv",
+      "sheet": null,
+      "measures": ["approved", "executed"],
+      "measure_dispatch": ["approved", "executed"],
+      "field_map": {
+        "year": "year",
+        "admin1": "admin1",
+        "econ1": "econ1",
+        "func1": "func1",
+        "approved": "approved",
+        "executed": "executed"
+      }
+    }
+  ]
+}

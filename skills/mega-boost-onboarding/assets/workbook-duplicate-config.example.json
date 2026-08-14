@@ -1,0 +1,48 @@
+{
+  "check_normalized_sheet_names": true,
+  "sample_limit": 25,
+  "excluded_sheets": [
+    {
+      "name": "<non-ingested-pivot-or-presentation-sheet>",
+      "role": "pivot",
+      "reason": "Not an extraction input; retained only for presentation.",
+      "owner": "<reviewer>",
+      "evidence": "<inventory-or-extraction-contract-reference>",
+      "checked_at": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "sheets": [
+    {
+      "name": "<raw-sheet-name>",
+      "role": "raw",
+      "header_row": 1,
+      "check_duplicate_headers": true,
+      "check_exact_rows": true,
+      "key_columns": ["<stable-source-row-id>"],
+      "ignore_columns": [],
+      "normalize_key_text": false,
+      "require_complete_key": true,
+      "allowed_duplicate_keys": [
+        {
+          "values": ["<reviewed-exception-key>"],
+          "reason": "<why repeated keys are semantically distinct>",
+          "owner": "<reviewer>",
+          "evidence": "<source-document-or-ticket-reference>",
+          "checked_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "name": "<formula-output-sheet-name>",
+      "role": "formula_output",
+      "header_row": 1,
+      "check_duplicate_headers": true,
+      "check_exact_rows": true,
+      "key_columns": ["<year>", "<category-code>"],
+      "ignore_columns": [],
+      "normalize_key_text": true,
+      "require_complete_key": true,
+      "allowed_duplicate_keys": []
+    }
+  ]
+}

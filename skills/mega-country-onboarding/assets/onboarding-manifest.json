@@ -1,0 +1,59 @@
+{
+  "schema_version": 4,
+  "country": {
+    "name": null,
+    "iso2": null,
+    "iso3": null
+  },
+  "workspace": {
+    "root": null,
+    "manifest_path": null
+  },
+  "source_workbook": {
+    "path_or_url": null,
+    "local_snapshot": null,
+    "sha256": null,
+    "authoritative_owner": null,
+    "sheets": [],
+    "notes": []
+  },
+  "source_package": {
+    "inventory_path": null,
+    "inventory_sha256": null,
+    "primary_source_ids": []
+  },
+  "repositories": {
+    "mega-boost": {"path": null, "baseline_ref": null, "final_ref": null},
+    "mega-indicators": {"path": null, "baseline_ref": null, "final_ref": null},
+    "rpf-country-dash": {"path": null, "baseline_ref": null, "final_ref": null}
+  },
+  "subnational": {
+    "required": null,
+    "decision_evidence": [],
+    "target_admin_level": null,
+    "target_units": [],
+    "no_data_policy": "Preserve missing source coverage as no-data; do not fabricate, split, or merge values without an explicit reviewed decision.",
+    "sources": [],
+    "mappings": []
+  },
+  "gates": {
+    "intake": {"status": "not_started", "evidence": [], "next_action": null},
+    "workbook_audit": {"status": "not_started", "evidence": [], "next_action": null},
+    "workbook_duplicates": {"status": "not_started", "evidence": [], "next_action": null},
+    "overcounting": {"status": "not_started", "evidence": [], "next_action": null},
+    "foreign_funding": {"status": "not_started", "evidence": [], "next_action": null},
+    "boost_etl": {"status": "not_started", "evidence": [], "next_action": null},
+    "subnational": {"status": "not_started", "evidence": [], "next_action": null},
+    "cross_country": {"status": "not_started", "evidence": [], "next_action": null},
+    "dashboard": {"status": "not_started", "evidence": [], "next_action": null},
+    "staging": {"status": "not_started", "evidence": [], "next_action": null},
+    "production": {"status": "not_started", "evidence": [], "next_action": null}
+  },
+  "decisions": [],
+  "risks": [],
+  "run_evidence": [],
+  "handoff": {
+    "summary": null,
+    "next_action": null
+  }
+}

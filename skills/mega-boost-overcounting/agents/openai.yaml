@@ -1,0 +1,4 @@
+interface:
+  display_name: "MEGA BOOST Overcounting"
+  short_description: "Detect and resolve BOOST classification overcounting"
+  default_prompt: "Use $mega-boost-overcounting to audit this country for formula and classification overcounting."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "MEGA Country Onboarding"
+  short_description: "Coordinate country onboarding across MEGA repositories"
+  default_prompt: "Use $mega-country-onboarding to onboard a new country across the MEGA data and dashboard repositories."

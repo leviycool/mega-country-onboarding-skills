@@ -1,0 +1,63 @@
+{
+  "country": {
+    "name": "Example Country",
+    "iso2": "EX",
+    "iso3": "EXP"
+  },
+  "captured_at": "2026-01-01T00:00:00Z",
+  "scope": {
+    "stages": [
+      "approved",
+      "executed"
+    ],
+    "expected_years": [
+      2022,
+      2023
+    ],
+    "currency": "LCU",
+    "amount_unit": "units",
+    "fiscal_year_convention": "Calendar year",
+    "subnational_review": "pending",
+    "published_products": [
+      "boost_country_gold",
+      "cross_country_aggregate",
+      "country_dashboard"
+    ]
+  },
+  "primary_source_ids": [
+    "boost_workbook"
+  ],
+  "sources": [
+    {
+      "id": "boost_workbook",
+      "kind": "boost_workbook",
+      "authority": "authoritative",
+      "required": true,
+      "path_or_url": "<authoritative path or URL>",
+      "local_snapshot": "<local immutable snapshot>",
+      "sha256": "<64-hex-digest>",
+      "owner": "<source owner or team>",
+      "format": "xlsx",
+      "data_classification": "internal",
+      "derived_from": [],
+      "notes": []
+    },
+    {
+      "id": "population_source",
+      "kind": "population",
+      "authority": "supporting",
+      "required": false,
+      "path_or_url": "<source path or URL>",
+      "local_snapshot": "<local immutable snapshot>",
+      "sha256": "<64-hex-digest>",
+      "owner": "<source owner or publisher>",
+      "format": "csv",
+      "data_classification": "public",
+      "derived_from": [],
+      "notes": [
+        "Mark required=true if the subnational decision enables per-capita output."
+      ]
+    }
+  ],
+  "known_constraints": []
+}

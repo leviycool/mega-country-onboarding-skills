@@ -1,0 +1,4 @@
+interface:
+  display_name: "MEGA Subnational Onboarding"
+  short_description: "Decide and implement subnational data and geography"
+  default_prompt: "Use $mega-subnational-onboarding to determine and implement the subnational data requirements for this country."

@@ -1,0 +1,47 @@
+{
+  "country": "Exampleland",
+  "iso3": "EXP",
+  "subnational_required": true,
+  "required_dataset_names": ["boost_geography", "population"],
+  "target": {
+    "admin_level": "admin1",
+    "vintage": "2024",
+    "boundary_path": "boundaries.geojson",
+    "boundary_format": "geojson",
+    "boundary_name_property": "admin1_region",
+    "expected_unit_count": 3,
+    "require_geometry_validation": true
+  },
+  "datasets": [
+    {
+      "name": "population",
+      "role": "population",
+      "path": "population.csv",
+      "format": "csv",
+      "name_column": "adm1_name",
+      "year_column": "year",
+      "value_column": "population",
+      "required_complete": true,
+      "required_years": [2022, 2023],
+      "accepted_no_data": [],
+      "mapping": {
+        "North Province": "North",
+        "Central Province": "Central",
+        "South Province": "South"
+      }
+    },
+    {
+      "name": "boost_geography",
+      "role": "boost_geography",
+      "path": "boost-geography.csv",
+      "format": "csv",
+      "name_column": "geo1",
+      "year_column": "year",
+      "value_column": "approved",
+      "required_complete": true,
+      "required_years": [2022, 2023],
+      "accepted_no_data": [],
+      "mapping": {}
+    }
+  ]
+}

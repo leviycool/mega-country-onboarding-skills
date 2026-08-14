@@ -1,0 +1,21 @@
+.DS_Store
+.env
+.env.*
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Country onboarding work products and source data
+/data/
+/onboarding/
+/outputs/
+/tmp/
+*.xlsx
+*.xlsm
+*.xltx
+*.xltm
+*.xls
+*.ods
+*.parquet

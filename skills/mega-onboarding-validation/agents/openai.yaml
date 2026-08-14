@@ -1,0 +1,4 @@
+interface:
+  display_name: "MEGA Onboarding Validation"
+  short_description: "Validate and release a country across the MEGA stack"
+  default_prompt: "Use $mega-onboarding-validation to verify this country end to end before release."

@@ -1,0 +1,15 @@
+{
+  "description": "Foreign funding is identified from the reviewed raw funding-code field.",
+  "branches": [
+    {
+      "all": [
+        {
+          "column": "<raw-funding-code-column>",
+          "operator": "starts_with",
+          "value": "<foreign-code-prefix>",
+          "case_sensitive": false
+        }
+      ]
+    }
+  ]
+}
