@@ -56,4 +56,4 @@ Do not require both boolean values when source evidence shows a country-year leg
 
 ## Acceptance
 
-Use the threshold currently documented by the repository and project owner; the mega-boost onboarding guide historically used 5 percent. Also review absolute differences, row counts, and systematic bias. Require individual disposition for every result outside tolerance and every unsupported formula used by published totals.
+Use the threshold currently documented by the repository and project owner; the mega-boost onboarding guide historically used 5 percent. Also review absolute differences, row counts, and systematic bias. Require individual disposition for every result outside tolerance. An unsupported formula used by a published total needs both an independently reproduced result and a formally accepted risk.

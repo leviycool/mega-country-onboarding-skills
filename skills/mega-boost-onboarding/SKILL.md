@@ -12,11 +12,11 @@ Turn the authoritative workbook into a reproducible line-level pipeline. Keep fo
 Read [references/workbook-to-dlt.md](references/workbook-to-dlt.md), [references/discrepancy-checks.md](references/discrepancy-checks.md), and [references/formula-rewrites.md](references/formula-rewrites.md).
 
 1. Confirm the workbook hash, owner, currency and scale, fiscal-year meaning, expected stages, and missing-value markers against the source inventory.
-2. Run `scripts/workbook_inventory.py` for `.xlsx` or `.xlsm`. For ODS, retain the original cached values and record any XLSX conversion as a derived working file.
+2. Run `scripts/workbook_inventory.py` for `.xlsx` or `.xlsm`. Resolve every reported formula cell without a cached calculated value before relying on workbook outputs. For ODS, retain the original cached values and record any XLSX conversion as a derived working file.
 3. Inspect every visible, hidden, and very-hidden sheet. Assign each sheet a role: raw, formula output, lookup, supplemental, pivot, or presentation-only.
 4. Configure [assets/workbook-duplicate-config.example.json](assets/workbook-duplicate-config.example.json) and run `scripts/check_workbook_duplicates.py`.
 5. Account for every sheet. A non-ingested exclusion needs an owner, timestamp, reason, and supporting evidence.
-6. Record named ranges, external links, schema changes, formula counts, overrides, volatile functions, and formula errors.
+6. Record named ranges, external links, schema changes, formula and missing-cache counts, overrides, volatile functions, and formula errors.
 
 Resolve source duplicates before studying classification overlap. An exact repeated row, a repeated business key, and two rules selecting the same row need different fixes.
 
@@ -72,7 +72,7 @@ Compare source, workbook outputs, and pipeline at total, economic, functional, s
 
 Classify each result as a match, numeric discrepancy, missing reference, missing pipeline value, unsupported reference, or named exclusion. Keep a resolution ledger with amount, cause, owner, and disposition. Review both percentage and absolute impact; a small percentage can still be material.
 
-If a workbook formula needs correction, obtain explicit authorization and follow the formula-rewrite protocol. Patch a new copy, verify the exact cells and OOXML archive members, recalculate in a spreadsheet engine when available, and rerun the affected checks.
+If a workbook formula needs correction, obtain explicit authorization and follow the formula-rewrite protocol. Patch a new copy, verify the exact cells and OOXML archive members, recalculate in a spreadsheet engine, and rerun the affected checks. If recalculation is unavailable, keep the workbook gate blocked unless an independently reproduced result and accepted risk cover every affected published value.
 
 ## Integrate after the country tables pass
 
@@ -87,7 +87,7 @@ Finish this skill when:
 
 - every workbook sheet has been inspected or narrowly excluded;
 - duplicate names, headers, rows, and keys are resolved or reviewed;
-- published formulas are matched or explicitly unsupported;
+- published formulas are matched; each unsupported formula affecting a published value has an independently reproduced result and a formally accepted risk;
 - classification ownership and `is_foreign` checks pass;
 - bronze, silver, and gold conserve named measures after documented exclusions;
 - expected stages and years are present and the gold schema matches the aggregate contract;

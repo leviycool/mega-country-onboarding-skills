@@ -9,7 +9,7 @@ Rewrite formulas only when the user explicitly authorizes an upstream workbook c
 3. Independently calculate the expected result from raw microdata before editing.
 4. Patch only listed cells in a new `.xlsx` copy. Use `scripts/patch_xlsx_formulas.py` for OOXML-safe targeted changes.
 5. Set automatic/full calculation, remove stale calculation-chain references, and never claim that a cached value proves Excel recalculated it.
-6. Open in a real spreadsheet engine when available, save, and re-read values. Do not use `openpyxl` as a formula evaluator.
+6. Open in a real spreadsheet engine, recalculate, save, and re-read values. Do not use `openpyxl` as a formula evaluator. If no engine is available, leave validation blocked unless an independently reproduced result and accepted risk cover every affected published value.
 7. Run `scripts/verify_xlsx_patch.py` to require exact formula changes, unchanged styles, and no unexpected archive-member changes.
 8. Re-run formula-to-microdata, overcounting, discrepancy, and DLT ownership checks.
 9. Compare formula-error counts before and after; do not introduce `#VALUE!`, `#REF!`, `#N/A`, or other errors.

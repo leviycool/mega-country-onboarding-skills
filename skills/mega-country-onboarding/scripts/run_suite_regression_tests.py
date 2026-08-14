@@ -121,25 +121,28 @@ def manifest_tests(root: Path, results: list[dict]) -> None:
     for repo in ("mega-boost", "mega-indicators", "rpf-country-dash"):
         (root / repo).mkdir()
     checker = SUITE_ROOT / "mega-country-onboarding" / "scripts" / "check_manifest.py"
-    gate_names = {
+    gate_names = (
         "intake",
         "workbook_audit",
+        "subnational_scope",
         "workbook_duplicates",
         "overcounting",
         "foreign_funding",
         "boost_etl",
-        "subnational",
+        "subnational_data",
         "cross_country",
         "dashboard",
         "staging",
         "production",
-    }
+    )
     required_report_checks = {
         "intake": "source_intake",
+        "workbook_audit": "workbook_audit",
+        "subnational_scope": "subnational_decision",
         "workbook_duplicates": "workbook_duplicates",
         "overcounting": "overcounting",
         "foreign_funding": "foreign_funding",
-        "subnational": "subnational_decision",
+        "subnational_data": "subnational_decision",
         "cross_country": "reconciliation",
     }
     evidence_by_gate = {}
@@ -151,6 +154,15 @@ def manifest_tests(root: Path, results: list[dict]) -> None:
         }
         if gate == "intake":
             report["inventory_sha256"] = sha256(source_inventory)
+        if gate in {"subnational_scope", "subnational_data"}:
+            report.update(
+                {
+                    "required": False,
+                    "owner": "regression-test",
+                    "checked_at": NOW,
+                    "decision_evidence": ["Synthetic central-only review."],
+                }
+            )
         write_json(
             evidence_file,
             report,
@@ -164,7 +176,7 @@ def manifest_tests(root: Path, results: list[dict]) -> None:
             }
         ]
     base = {
-        "schema_version": 4,
+        "schema_version": 5,
         "country": {"name": "Auditland", "iso2": "AU", "iso3": "AUD"},
         "workspace": {"root": str(root), "manifest_path": "manifest.json"},
         "source_workbook": {
@@ -188,6 +200,7 @@ def manifest_tests(root: Path, results: list[dict]) -> None:
         "subnational": {
             "required": False,
             "decision_evidence": ["central-only source review"],
+            "required_dataset_names": [],
         },
         "risks": [],
         "handoff": {"summary": "Synthetic regression fixture."},
@@ -214,6 +227,29 @@ def manifest_tests(root: Path, results: list[dict]) -> None:
         results,
         "manifest rejects mismatched evidence hashes",
         execute([checker, "check", "--manifest", bad_hash_path, "--ready"]),
+        1,
+    )
+    missing_cache_manifest = json.loads(json.dumps(ready))
+    missing_cache_manifest_path = root / "manifest-missing-formula-cache.json"
+    missing_cache_report = root / "formula-without-cache-report.json"
+    missing_cache_manifest["workspace"]["manifest_path"] = str(
+        missing_cache_manifest_path
+    )
+    missing_cache_manifest["gates"]["workbook_audit"]["evidence"] = [
+        {
+            "kind": "file",
+            "path": str(missing_cache_report),
+            "sha256": sha256(missing_cache_report),
+            "checked_at": NOW,
+        }
+    ]
+    write_json(missing_cache_manifest_path, missing_cache_manifest)
+    record(
+        results,
+        "manifest rejects a workbook audit with missing formula caches",
+        execute(
+            [checker, "check", "--manifest", missing_cache_manifest_path, "--ready"]
+        ),
         1,
     )
     stale_intake = json.loads(json.dumps(ready))
@@ -243,6 +279,36 @@ def manifest_tests(root: Path, results: list[dict]) -> None:
         execute([checker, "check", "--manifest", stale_intake_path, "--ready"]),
         1,
     )
+    mismatched_scope = json.loads(json.dumps(ready))
+    mismatched_scope_path = root / "manifest-mismatched-subnational-scope.json"
+    mismatched_scope["workspace"]["manifest_path"] = str(mismatched_scope_path)
+    mismatched_scope["subnational"].update(
+        {
+            "required": True,
+            "target_admin_level": "admin1",
+            "required_dataset_names": ["boundaries", "population"],
+            "target_units": ["North"],
+            "sources": ["population.csv"],
+        }
+    )
+    write_json(mismatched_scope_path, mismatched_scope)
+    record(
+        results,
+        "manifest rejects subnational evidence that contradicts scope",
+        execute([checker, "check", "--manifest", mismatched_scope_path, "--ready"]),
+        1,
+    )
+    invalid_scope_type = json.loads(json.dumps(ready))
+    invalid_scope_type_path = root / "manifest-invalid-subnational-type.json"
+    invalid_scope_type["workspace"]["manifest_path"] = str(invalid_scope_type_path)
+    invalid_scope_type["subnational"]["required"] = [True]
+    write_json(invalid_scope_type_path, invalid_scope_type)
+    record(
+        results,
+        "manifest rejects a non-boolean subnational scope without crashing",
+        execute([checker, "check", "--manifest", invalid_scope_type_path, "--ready"]),
+        1,
+    )
     bypass = dict(base)
     bypass["gates"] = {
         name: {
@@ -266,27 +332,130 @@ def manifest_tests(root: Path, results: list[dict]) -> None:
         execute([checker, "check", "--manifest", bypass_path, "--ready"]),
         1,
     )
-    early_subnational = json.loads(json.dumps(ready))
-    early_subnational_path = root / "manifest-early-subnational.json"
-    early_subnational["workspace"]["manifest_path"] = str(early_subnational_path)
-    early_subnational["gates"]["subnational"] = {
+    gate_routing = json.loads(json.dumps(ready))
+    gate_routing_path = root / "manifest-gate-routing.json"
+    gate_routing["workspace"]["manifest_path"] = str(gate_routing_path)
+    gate_routing["gates"]["subnational_scope"] = {
         "status": "not_started",
         "evidence": [],
         "next_action": "Decide central-only versus subnational.",
     }
-    early_subnational["gates"]["boost_etl"] = {
+    gate_routing["gates"]["boost_etl"] = {
         "status": "not_started",
         "evidence": [],
         "next_action": "Build BOOST ETL.",
     }
-    write_json(early_subnational_path, early_subnational)
-    next_run = execute([checker, "next", "--manifest", early_subnational_path])
+    gate_routing["gates"]["subnational_data"] = {
+        "status": "not_started",
+        "evidence": [],
+        "next_action": "Validate subnational data.",
+    }
+    write_json(gate_routing_path, gate_routing)
+    next_run = execute([checker, "next", "--manifest", gate_routing_path])
     next_result = json.loads(next_run.stdout)
     record_condition(
         results,
-        "manifest routes subnational work before BOOST ETL",
-        next_run.returncode == 0 and next_result.get("current_gate") == "subnational",
+        "manifest routes subnational scope before BOOST ETL",
+        next_run.returncode == 0
+        and next_result.get("current_gate") == "subnational_scope",
         next_run,
+    )
+    gate_routing["gates"]["subnational_scope"] = ready["gates"]["subnational_scope"]
+    write_json(gate_routing_path, gate_routing)
+    before_data_run = execute([checker, "next", "--manifest", gate_routing_path])
+    before_data_result = json.loads(before_data_run.stdout)
+    gate_routing["gates"]["boost_etl"] = ready["gates"]["boost_etl"]
+    write_json(gate_routing_path, gate_routing)
+    data_run = execute([checker, "next", "--manifest", gate_routing_path])
+    data_result = json.loads(data_run.stdout)
+    record_condition(
+        results,
+        "manifest routes subnational data after BOOST ETL",
+        before_data_run.returncode == 0
+        and before_data_result.get("current_gate") == "boost_etl"
+        and data_run.returncode == 0
+        and data_result.get("current_gate") == "subnational_data",
+        data_run,
+    )
+
+    legacy = json.loads(json.dumps(ready))
+    legacy["schema_version"] = 4
+    legacy_path = root / "manifest-v4.json"
+    upgraded_path = root / "manifest-v5.json"
+    legacy["workspace"]["manifest_path"] = str(legacy_path)
+    legacy["gates"] = {
+        name: legacy["gates"][name]
+        for name in (
+            "intake",
+            "workbook_audit",
+            "workbook_duplicates",
+            "overcounting",
+            "foreign_funding",
+            "boost_etl",
+        )
+    } | {
+        "subnational": ready["gates"]["subnational_data"],
+        "cross_country": ready["gates"]["cross_country"],
+        "dashboard": ready["gates"]["dashboard"],
+        "staging": ready["gates"]["staging"],
+        "production": ready["gates"]["production"],
+    }
+    write_json(legacy_path, legacy)
+    upgrade_run = execute(
+        [checker, "upgrade", "--manifest", legacy_path, "--output", upgraded_path]
+    )
+    upgraded = json.loads(upgraded_path.read_text(encoding="utf-8"))
+    record_condition(
+        results,
+        "manifest upgrades schema v4 without overwriting the source",
+        upgrade_run.returncode == 0
+        and legacy_path.is_file()
+        and upgraded.get("schema_version") == 5
+        and tuple(upgraded.get("gates", {})) == gate_names
+        and "subnational" not in upgraded.get("gates", {}),
+        upgrade_run,
+    )
+    required_legacy = json.loads(json.dumps(legacy))
+    required_legacy_path = root / "manifest-v4-required-subnational.json"
+    required_upgraded_path = root / "manifest-v5-required-subnational.json"
+    required_report_path = root / "report-v4-required-subnational.json"
+    write_json(required_report_path, {"check": "subnational", "passed": True})
+    required_legacy["workspace"]["manifest_path"] = str(required_legacy_path)
+    required_legacy["subnational"].update(
+        {
+            "required": True,
+            "target_admin_level": "admin1",
+            "target_units": ["North"],
+            "sources": ["population.csv"],
+        }
+    )
+    required_legacy["gates"]["subnational"]["evidence"] = [
+        {
+            "kind": "file",
+            "path": str(required_report_path),
+            "sha256": sha256(required_report_path),
+            "checked_at": NOW,
+        }
+    ]
+    write_json(required_legacy_path, required_legacy)
+    required_upgrade_run = execute(
+        [
+            checker,
+            "upgrade",
+            "--manifest",
+            required_legacy_path,
+            "--output",
+            required_upgraded_path,
+        ]
+    )
+    required_upgraded = json.loads(required_upgraded_path.read_text(encoding="utf-8"))
+    record_condition(
+        results,
+        "manifest upgrade reopens required subnational scope for review",
+        required_upgrade_run.returncode == 0
+        and required_upgraded["gates"]["subnational_scope"]["status"] == "in_progress"
+        and required_upgraded["gates"]["subnational_data"]["status"] == "passed",
+        required_upgrade_run,
     )
 
 
@@ -358,6 +527,45 @@ def source_inventory_tests(root: Path, results: list[dict]) -> None:
             ]
         ),
         1,
+    )
+
+
+def workbook_inventory_tests(root: Path, results: list[dict]) -> None:
+    checker = BOOST / "workbook_inventory.py"
+    missing_cache_workbook = root / "formula-without-cache.xlsx"
+    workbook = Workbook()
+    workbook.active["A1"] = "=1+1"
+    workbook.save(missing_cache_workbook)
+    missing_cache_report = root / "formula-without-cache-report.json"
+    missing_cache_run = execute(
+        [checker, missing_cache_workbook, "--json", missing_cache_report]
+    )
+    missing_cache = json.loads(missing_cache_report.read_text(encoding="utf-8"))
+    record_condition(
+        results,
+        "workbook audit blocks formulas without cached calculated values",
+        missing_cache_run.returncode == 1
+        and missing_cache.get("passed") is False
+        and missing_cache.get("formula_without_cached_value_count") == 1
+        and missing_cache["sheets"][0]["formula_without_cached_value_cells"][0]["cell"]
+        == "A1",
+        missing_cache_run,
+    )
+
+    values_workbook = root / "values-only.xlsx"
+    workbook = Workbook()
+    workbook.active["A1"] = 2
+    workbook.save(values_workbook)
+    values_report = root / "values-only-report.json"
+    values_run = execute([checker, values_workbook, "--json", values_report])
+    values = json.loads(values_report.read_text(encoding="utf-8"))
+    record_condition(
+        results,
+        "workbook audit accepts a clean values-only workbook",
+        values_run.returncode == 0
+        and values.get("passed") is True
+        and values.get("formula_without_cached_value_count") == 0,
+        values_run,
     )
 
 
@@ -951,6 +1159,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="mega-onboarding-regression-") as temp:
         root = Path(temp)
         source_inventory_tests(root, results)
+        workbook_inventory_tests(root, results)
         manifest_tests(root, results)
         duplicate_tests(root, results)
         foreign_tests(root, results)

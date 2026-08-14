@@ -14,9 +14,16 @@
 - raw and formula sheets inventoried, including hidden sheets;
 - normalized sheet names and headers are collision-free;
 - exact duplicate rows and configured business-key duplicates are absent or narrowly dispositioned;
-- hardcoded overrides and unsupported formulas reported;
+- hardcoded overrides reported, and unsupported formulas affecting published values independently reproduced with accepted risks;
+- formula cells used by published outputs have cached calculated values;
 - parser-to-cached-value checks complete;
 - authorized formula rewrites verified at cell and archive-member level.
+
+## Subnational scope gate
+
+- required/not-required decision recorded;
+- target level and required dataset names explicit when required;
+- evidence, affected products, owner, and timestamp recorded.
 
 ## BOOST gate
 
@@ -34,9 +41,8 @@
 - reconciliation inputs are unique at their declared comparison grain, or each intentional aggregation has a reviewed reason;
 - country included in applicable CCI and aggregate checks.
 
-## Subnational gate
+## Subnational data gate
 
-- required/not-required decision recorded;
 - target level, vintage, and unit list explicit;
 - boundaries unique and valid;
 - population unit-year coverage valid;

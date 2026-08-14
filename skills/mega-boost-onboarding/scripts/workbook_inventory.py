@@ -92,6 +92,8 @@ def inspect_sheet(
     function_counts: Counter[str] = Counter()
     volatile_cells: list[dict] = []
     error_cells: list[dict] = []
+    formula_without_cached_value_cells: list[dict] = []
+    formula_without_cached_value_count = error_cell_count = 0
     formula_count = cell_count = row_count = 0
     min_row = min_col = None
     max_row = max_col = 0
@@ -132,10 +134,22 @@ def inspect_sheet(
                     volatile_cells.append(
                         {"cell": ref, "functions": hit, "formula": formula_text}
                     )
-            if cell.attrib.get("t") == "e" and len(error_cells) < suspect_limit:
-                error_cells.append(
-                    {"cell": ref, "value": value, "has_formula": formula is not None}
-                )
+                if value in (None, ""):
+                    formula_without_cached_value_count += 1
+                    if len(formula_without_cached_value_cells) < suspect_limit:
+                        formula_without_cached_value_cells.append(
+                            {"cell": ref, "formula": formula_text}
+                        )
+            if cell.attrib.get("t") == "e":
+                error_cell_count += 1
+                if len(error_cells) < suspect_limit:
+                    error_cells.append(
+                        {
+                            "cell": ref,
+                            "value": value,
+                            "has_formula": formula is not None,
+                        }
+                    )
             elif (
                 formula is None
                 and cell.attrib.get("t") in {None, "n"}
@@ -168,8 +182,14 @@ def inspect_sheet(
         "row_extent": row_count,
         "cell_count": cell_count,
         "formula_count": formula_count,
+        "formula_without_cached_value_count": formula_without_cached_value_count,
+        "formula_without_cached_value_cells": formula_without_cached_value_cells,
+        "formula_without_cached_value_cells_truncated": (
+            formula_without_cached_value_count > len(formula_without_cached_value_cells)
+        ),
         "formula_functions": dict(function_counts.most_common()),
         "volatile_formula_cells": volatile_cells,
+        "error_cell_count": error_cell_count,
         "error_cells": error_cells,
         "hardcoded_numeric_suspects": suspects,
         "hardcoded_suspects_truncated": len(suspects) == suspect_limit,
@@ -218,7 +238,20 @@ def inventory(path: Path, suspect_limit: int) -> dict:
             )
 
         calc = workbook.find(q(MAIN, "calcPr"))
+        missing_cached_values = sum(
+            sheet.get("formula_without_cached_value_count", 0) for sheet in sheets
+        )
+        error_cells = sum(sheet.get("error_cell_count", 0) for sheet in sheets)
+        issues = []
+        if missing_cached_values:
+            issues.append(
+                f"{missing_cached_values} formula cell(s) have no cached calculated value"
+            )
+        if error_cells:
+            issues.append(f"{error_cells} workbook cell(s) contain formula errors")
         return {
+            "check": "workbook_audit",
+            "passed": not issues,
             "file": str(path.resolve()),
             "sha256": sha256(path),
             "size_bytes": path.stat().st_size,
@@ -235,6 +268,9 @@ def inventory(path: Path, suspect_limit: int) -> dict:
                 item["broken_reference"] for item in defined_names
             ),
             "sheets": sheets,
+            "formula_without_cached_value_count": missing_cached_values,
+            "error_cell_count": error_cells,
+            "issues": issues,
         }
 
 
@@ -247,6 +283,7 @@ def write_sheet_csv(report: dict, path: Path) -> None:
         "row_extent",
         "cell_count",
         "formula_count",
+        "formula_without_cached_value_count",
         "volatile_formula_count",
         "error_cell_count",
         "hardcoded_numeric_suspect_count",
@@ -263,10 +300,13 @@ def write_sheet_csv(report: dict, path: Path) -> None:
                     "row_extent": sheet.get("row_extent"),
                     "cell_count": sheet.get("cell_count"),
                     "formula_count": sheet.get("formula_count"),
+                    "formula_without_cached_value_count": sheet.get(
+                        "formula_without_cached_value_count"
+                    ),
                     "volatile_formula_count": len(
                         sheet.get("volatile_formula_cells", [])
                     ),
-                    "error_cell_count": len(sheet.get("error_cells", [])),
+                    "error_cell_count": sheet.get("error_cell_count"),
                     "hardcoded_numeric_suspect_count": len(
                         sheet.get("hardcoded_numeric_suspects", [])
                     ),
@@ -293,16 +333,19 @@ def main() -> int:
     if args.sheet_csv:
         write_sheet_csv(report, args.sheet_csv)
     summary = {
+        "passed": report["passed"],
         "file": report["file"],
         "sheets": len(report["sheets"]),
         "hidden_sheets": sum(sheet["state"] != "visible" for sheet in report["sheets"]),
         "formulas": sum(sheet.get("formula_count", 0) for sheet in report["sheets"]),
+        "formulas_without_cached_values": report["formula_without_cached_value_count"],
         "defined_names": len(report["defined_names"]),
         "broken_defined_names": report["broken_defined_name_count"],
         "external_links": len(report["external_link_members"]),
+        "issues": report["issues"],
     }
     print(json.dumps(summary, ensure_ascii=False))
-    return 0
+    return 0 if report["passed"] else 1
 
 
 if __name__ == "__main__":

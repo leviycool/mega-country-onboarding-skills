@@ -5,20 +5,22 @@ Follow this dependency order. A later mismatch can reopen an earlier phase; upda
 ```mermaid
 flowchart TD
     A["Lock raw sources, scope, and baselines"] --> B["Inventory workbook and audit duplicates"]
-    B --> C["Extract formulas, overrides, and classification rules"]
-    B --> D{"Subnational data required?"}
-    C --> E["Test overlaps and foreign-funding predicate"]
+    B --> C{"Subnational data required?"}
+    B --> D["Extract formulas, overrides, and classification rules"]
+    D --> E["Test overlaps and foreign-funding predicate"]
     E --> F["Build BOOST bronze, silver, and gold"]
-    D -->|"Central only"| G["Record reviewed decision"]
-    D -->|"Yes"| H["Align BOOST geography, boundaries, population, and outcomes"]
+    C -->|"Central only"| G["Record reviewed decision"]
+    C -->|"Yes"| H["Set target level and required datasets"]
     F --> I["Reconcile workbook and country gold"]
-    G --> J["Integrate country into aggregates and dashboard"]
+    F --> J["Validate boundaries, population, mappings, and no-data"]
     H --> J
-    I --> J
-    J --> K["Run staging and dashboard checks"]
-    K --> L{"All standard gates pass?"}
-    L -->|"No"| M["Return to the first failing boundary"]
-    L -->|"Yes"| N["Run authorized production and hand off"]
+    G --> K["Integrate country into aggregates and dashboard"]
+    I --> K
+    J --> K
+    K --> L["Run staging and dashboard checks"]
+    L --> M{"All standard gates pass?"}
+    M -->|"No"| N["Return to the first failing boundary"]
+    M -->|"Yes"| O["Run authorized production and hand off"]
 ```
 
 ## Phase outputs
@@ -26,9 +28,10 @@ flowchart TD
 | Phase | Owning skill | Exit artifact |
 |---|---|---|
 | Source intake | `mega-country-onboarding` | source inventory and `source_intake` report |
-| Workbook and country ETL | `mega-boost-onboarding` | inventory, duplicate report, rule set, foreign report, country tables, reconciliation |
+| Workbook and country ETL | `mega-boost-onboarding` | inventory, formula-cache status, duplicate report, rule set, foreign report, country tables, reconciliation |
 | Classification overlap | `mega-boost-overcounting` | overlap report and ownership ledger |
-| Geography and indicators | `mega-subnational-onboarding` | central-only decision or admin contract and coverage report |
+| Geography scope | `mega-subnational-onboarding` | central-only decision or required scope with target level and dataset list |
+| Geography data | `mega-subnational-onboarding` | central-only decision or admin contract and coverage report |
 | Cross-stack release | `mega-onboarding-validation` | release report tied to refs, runs, and table snapshots |
 | Handoff | `mega-country-onboarding` | release-ready manifest and remaining actions |
 

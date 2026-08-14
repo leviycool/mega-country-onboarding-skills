@@ -79,4 +79,4 @@ The narrower category is often the better default candidate, but predicate shape
 - Keep unmatched rows visible and keep each subcategory consistent with its parent.
 - Use the authorized formula-rewrite flow in `$mega-boost-onboarding` when the source workbook changes.
 
-Finish only after the corrected scope has zero unresolved peer overlaps and self-doubles, exact expected stage/code coverage, matched supported formula results, explicit unsupported coverage, and one-owner-per-dimension pipeline tests. Re-run workbook, country-gold, aggregate, and discrepancy checks and record the before/after monetary effect.
+Finish only after the corrected scope has zero unresolved peer overlaps and self-doubles, exact expected stage/code coverage, matched supported formula results, and one-owner-per-dimension pipeline tests. An unsupported formula affecting a published value also needs an independently reproduced result and a formally accepted risk. Re-run workbook, country-gold, aggregate, and discrepancy checks and record the before/after monetary effect.

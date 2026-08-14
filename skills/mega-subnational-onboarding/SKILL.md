@@ -20,10 +20,10 @@ Inspect the workbook and current pipeline for:
 - dashboard features that need regional boundaries, population, per-capita values, poverty, or other outcomes;
 - central ministry names that look geographic but do not represent regional allocation.
 
-Choose one of two outputs:
+Create the early scope report from [assets/subnational-scope.example.json](assets/subnational-scope.example.json), then choose one of two paths:
 
-- **Central-only:** create a reviewed `subnational_decision` report with the inspected fields, value evidence, affected products, owner, and timestamp.
-- **Subnational required:** create an admin contract from [assets/admin-contract.example.json](assets/admin-contract.example.json) and continue with source alignment.
+- **Central-only:** use `check: subnational_decision`, `required: false`, and record the inspected fields, value evidence, affected products, owner, and timestamp. Reuse this report at the final subnational-data gate.
+- **Subnational required:** use `check: subnational_scope`, `required: true`, and record the target admin level plus every required dataset. Pass the scope gate before BOOST ETL, then create an admin contract from [assets/admin-contract.example.json](assets/admin-contract.example.json) and continue source alignment in parallel.
 
 Absence of a familiar column name is not enough to call a country central-only.
 
@@ -80,4 +80,4 @@ Use an environment with pandas and Shapely for a release audit. Missing geometry
 
 ## Exit criteria
 
-Return to `$mega-country-onboarding` with either a passing central-only decision or a passing admin coverage report. For a subnational country, also provide the target level and vintage, unit list, source provenance, mappings, no-data units, indicator pipeline refs, and remaining geography decisions.
+Return to `$mega-country-onboarding` twice when subnational data are required: first with the passing scope report, then with the passing admin coverage report. The final report must include the target level and vintage, unit list, source provenance, mappings, no-data units, indicator pipeline refs, and remaining geography decisions. A central-only country may use its reviewed decision report for both gates.
