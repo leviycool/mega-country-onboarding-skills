@@ -1,0 +1,15 @@
+{
+  "check": "subnational_scope",
+  "passed": true,
+  "country": "Exampleland",
+  "iso3": "EXP",
+  "required": true,
+  "target_admin_level": "admin1",
+  "required_dataset_names": ["boundaries", "boost_geography", "population"],
+  "affected_products": ["boost_country_gold", "country_dashboard"],
+  "decision_evidence": [
+    "Reviewed allocation-geography fields and the dashboard per-capita requirement."
+  ],
+  "owner": "team-or-source-owner",
+  "checked_at": "2026-01-01T00:00:00Z"
+}

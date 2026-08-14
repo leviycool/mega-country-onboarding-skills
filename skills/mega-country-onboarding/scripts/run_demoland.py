@@ -10,7 +10,9 @@ import json
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 from openpyxl import Workbook
 
@@ -20,6 +22,7 @@ ORCHESTRATOR = Path(__file__).resolve().parent
 BOOST = SUITE_ROOT / "mega-boost-onboarding" / "scripts"
 OVERCOUNTING = SUITE_ROOT / "mega-boost-overcounting" / "scripts"
 NOW = "2026-01-01T00:00:00Z"
+MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 
 
 def write_json(path: Path, value: object) -> None:
@@ -102,6 +105,31 @@ def make_workbook(path: Path) -> None:
     summary.append([2023, "approved", "=SUMIFS('Raw Data'!D:D,'Raw Data'!B:B,A2)"])
     summary.append([2024, "approved", "=SUMIFS('Raw Data'!D:D,'Raw Data'!B:B,A3)"])
     workbook.save(path)
+    cache_formula_values(path, {"C2": 150, "C3": 120})
+
+
+def cache_formula_values(path: Path, values: dict[str, int | float]) -> None:
+    worksheet = "xl/worksheets/sheet2.xml"
+    replacement = path.with_name(f"{path.stem}.cached{path.suffix}")
+    ET.register_namespace("", MAIN)
+    with zipfile.ZipFile(path) as source, zipfile.ZipFile(replacement, "w") as output:
+        for info in source.infolist():
+            payload = source.read(info.filename)
+            if info.filename == worksheet:
+                root = ET.fromstring(payload)
+                for cell_ref, value in values.items():
+                    cell = root.find(f".//{{{MAIN}}}c[@r='{cell_ref}']")
+                    if cell is None or cell.find(f"{{{MAIN}}}f") is None:
+                        raise RuntimeError(
+                            f"Synthetic formula cell is missing: {cell_ref}"
+                        )
+                    cached = cell.find(f"{{{MAIN}}}v")
+                    if cached is None:
+                        cached = ET.SubElement(cell, f"{{{MAIN}}}v")
+                    cached.text = str(value)
+                payload = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+            output.writestr(info, payload)
+    replacement.replace(path)
 
 
 def update_manifest(workspace: Path, reports: dict[str, Path]) -> dict:
@@ -109,10 +137,11 @@ def update_manifest(workspace: Path, reports: dict[str, Path]) -> dict:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     evidence_gate_map = {
         "workbook_audit": "workbook_inventory",
+        "subnational_scope": "subnational_decision",
         "workbook_duplicates": "workbook_duplicates",
         "overcounting": "overcounting",
         "foreign_funding": "foreign_funding",
-        "subnational": "subnational_decision",
+        "subnational_data": "subnational_decision",
     }
     for gate, report_name in evidence_gate_map.items():
         report = reports[report_name]
@@ -388,6 +417,7 @@ def run_demo(root: Path) -> dict:
             "check": "subnational_decision",
             "passed": True,
             "country": "DemoLand",
+            "required": False,
             "decision": "central_only",
             "owner": "MEGA demo team",
             "checked_at": NOW,

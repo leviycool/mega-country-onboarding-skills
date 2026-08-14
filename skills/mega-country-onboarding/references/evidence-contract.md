@@ -1,6 +1,6 @@
 # Manifest evidence contract
 
-Schema version 4 ties release readiness to the complete source package as well as the workbook. Every passed gate needs at least one `file`, `command`, or `run` object; prose alone cannot pass a gate.
+Schema version 5 ties release readiness to the complete source package as well as the workbook. Every passed gate needs at least one `file`, `command`, or `run` object; prose alone cannot pass a gate.
 
 ## Evidence shapes
 
@@ -15,18 +15,20 @@ File reports must exist when `--ready` runs and their hash must match:
 }
 ```
 
-The intake, duplicate, overcounting, foreign-funding, subnational, and cross-country gates additionally need a matching JSON report with `passed: true`. Use these `check` values:
+The intake, workbook-audit, duplicate, overcounting, foreign-funding, subnational, and cross-country gates additionally need a matching JSON report with `passed: true`. Use these `check` values:
 
 | Gate | Accepted `check` value |
 |---|---|
 | intake | `source_intake` |
+| workbook audit | `workbook_audit` |
+| subnational scope | `subnational_scope` or `subnational_decision` |
 | workbook duplicates | `workbook_duplicates` |
 | overcounting | `overcounting` |
 | foreign funding | `foreign_funding` |
-| subnational | `subnational` or `subnational_decision` |
+| subnational data | `subnational`, `subnational_data`, or `subnational_decision` |
 | cross-country | `cross_country` or `reconciliation` |
 
-For a central-only decision, store a reviewed report with `check: "subnational_decision"`, `passed: true`, `required: false`, source evidence, owner, and timestamp.
+For a central-only decision, store a reviewed report with `check: "subnational_decision"`, `passed: true`, `required: false`, source evidence, owner, and timestamp. For a required scope, use `check: "subnational_scope"`, `required: true`, and include the target admin level and required dataset names. The report's `required` value must match the manifest.
 
 Commands must record the exact command and successful exit code:
 
@@ -57,7 +59,7 @@ Use `decision` for reviewed human judgment and `url` for stable external evidenc
 ## Readiness rules
 
 - Require all standard gates to be `passed`; do not use `not_applicable` to bypass a required check.
-- Record a central-only geography determination as a passed subnational decision.
+- Pass subnational scope before BOOST ETL and subnational data before cross-country integration. Record a central-only geography determination as a passed decision at both gates.
 - Preserve local immutable snapshots for the source inventory and workbook even when the authority is a URL. Verify their hashes and record final repository refs.
 - Give every accepted release-blocking risk an accepter, timestamp, and rationale.
 - Keep evidence paths relative to the manifest where practical so another developer can re-run the checker.

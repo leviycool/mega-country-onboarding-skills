@@ -89,7 +89,13 @@ For repository-local use, keep `skills/` in the workspace and point Codex to the
 Use $mega-country-onboarding to onboard <country> from <raw package path>.
 ```
 
-Start with `skills/mega-country-onboarding/SKILL.md`. The orchestrator routes the specialist skills and creates a schema-v4 onboarding manifest.
+Start with `skills/mega-country-onboarding/SKILL.md`. The orchestrator routes the specialist skills and creates a schema-v5 onboarding manifest. Upgrade an existing v4 manifest without replacing it:
+
+```bash
+python skills/mega-country-onboarding/scripts/check_manifest.py upgrade \
+  --manifest /path/to/onboarding-manifest-v4.json \
+  --output /path/to/onboarding-manifest-v5.json
+```
 
 ## Local requirements
 

@@ -14,26 +14,29 @@ from urllib.parse import urlparse
 
 
 STATUSES = {"not_started", "in_progress", "passed", "blocked", "not_applicable"}
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 EVIDENCE_KINDS = {"command", "decision", "file", "run", "url"}
 MACHINE_EVIDENCE_KINDS = {"command", "file", "run"}
 SUCCESSFUL_RUN_STATES = {"passed", "success", "succeeded"}
 REQUIRED_REPORT_CHECKS = {
     "intake": {"source_intake"},
+    "workbook_audit": {"workbook_audit"},
+    "subnational_scope": {"subnational_scope", "subnational_decision"},
     "workbook_duplicates": {"workbook_duplicates"},
     "overcounting": {"overcounting"},
     "foreign_funding": {"foreign_funding"},
-    "subnational": {"subnational", "subnational_decision"},
+    "subnational_data": {"subnational", "subnational_data", "subnational_decision"},
     "cross_country": {"cross_country", "reconciliation"},
 }
 REQUIRED_GATES = {
     "intake",
     "workbook_audit",
+    "subnational_scope",
     "workbook_duplicates",
     "overcounting",
     "foreign_funding",
     "boost_etl",
-    "subnational",
+    "subnational_data",
     "cross_country",
     "dashboard",
     "staging",
@@ -42,11 +45,12 @@ REQUIRED_GATES = {
 GATE_ORDER = (
     "intake",
     "workbook_audit",
-    "subnational",
+    "subnational_scope",
     "workbook_duplicates",
     "overcounting",
     "foreign_funding",
     "boost_etl",
+    "subnational_data",
     "cross_country",
     "dashboard",
     "staging",
@@ -104,6 +108,89 @@ def initialize(args: argparse.Namespace) -> int:
     return 0
 
 
+def upgrade(args: argparse.Namespace) -> int:
+    if args.output.exists():
+        raise FileExistsError(f"Refusing to overwrite {args.output}")
+    manifest = deepcopy(load_json(args.manifest))
+    if manifest.get("schema_version") != 4:
+        raise ValueError("Only schema-v4 manifests can be upgraded to schema v5")
+    gates = manifest.get("gates")
+    if not isinstance(gates, dict):
+        raise ValueError("gates must be an object")
+    legacy_required = set(GATE_ORDER) - {"subnational_scope", "subnational_data"}
+    legacy_required.add("subnational")
+    missing = sorted(legacy_required - set(gates))
+    if missing:
+        raise ValueError(
+            f"Cannot upgrade a manifest with missing gates: {', '.join(missing)}"
+        )
+
+    legacy_subnational = gates["subnational"]
+    if not isinstance(legacy_subnational, dict):
+        raise ValueError("gates.subnational must be an object")
+    legacy_subnational_contract = manifest.get("subnational")
+    legacy_required_value = (
+        legacy_subnational_contract.get("required")
+        if isinstance(legacy_subnational_contract, dict)
+        else None
+    )
+    scope_gate = deepcopy(legacy_subnational)
+    if scope_gate.get("status") == "passed" and legacy_required_value is not False:
+        scope_gate["status"] = "in_progress"
+    if scope_gate.get("status") != "passed":
+        scope_gate["next_action"] = (
+            "Decide central-only versus subnational; record the target admin level "
+            "and required datasets in a reviewed schema-v5 scope report."
+        )
+    if legacy_subnational.get("status") == "passed":
+        data_gate = deepcopy(legacy_subnational)
+    else:
+        data_gate = {
+            "status": "not_started",
+            "evidence": [],
+            "next_action": (
+                "After BOOST ETL, validate boundaries, required datasets, mappings, "
+                "geometry, and no-data coverage."
+            ),
+        }
+
+    upgraded_gates = {}
+    for name in GATE_ORDER:
+        if name == "subnational_scope":
+            upgraded_gates[name] = scope_gate
+        elif name == "subnational_data":
+            upgraded_gates[name] = data_gate
+        else:
+            upgraded_gates[name] = deepcopy(gates[name])
+    manifest["schema_version"] = CURRENT_SCHEMA_VERSION
+    manifest["gates"] = upgraded_gates
+    subnational = manifest.get("subnational")
+    if not isinstance(subnational, dict):
+        subnational = {}
+        manifest["subnational"] = subnational
+    subnational.setdefault("required_dataset_names", [])
+    manifest.setdefault("workspace", {})["manifest_path"] = str(args.output.resolve())
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(
+        json.dumps(
+            {
+                "upgraded": str(args.output),
+                "from_schema": 4,
+                "to_schema": CURRENT_SCHEMA_VERSION,
+                "review_required": (
+                    "Review the copied scope and data evidence; for a required scope, "
+                    "also populate subnational.required_dataset_names."
+                ),
+            },
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def nonempty(value: object) -> bool:
     return value is not None and value != "" and value != [] and value != {}
 
@@ -134,6 +221,7 @@ def validate_evidence(
     ready: bool,
     base: Path,
     expected_inventory_sha256: str | None = None,
+    expected_subnational_required: bool | None = None,
 ) -> list[str]:
     issues: list[str] = []
     if not isinstance(evidence, list) or not evidence:
@@ -191,6 +279,59 @@ def validate_evidence(
                                 f"{prefix}.path was produced from a different source inventory"
                             )
                             valid_report = False
+                        if valid_report and gate_name in {
+                            "subnational_scope",
+                            "subnational_data",
+                        }:
+                            check_name = report.get("check")
+                            reported_required = (
+                                True
+                                if check_name in {"subnational", "subnational_data"}
+                                else report.get("required")
+                            )
+                            if not isinstance(reported_required, bool):
+                                issues.append(
+                                    f"{prefix}.path must declare a boolean required value"
+                                )
+                                valid_report = False
+                            elif reported_required != expected_subnational_required:
+                                issues.append(
+                                    f"{prefix}.path required value does not match the manifest"
+                                )
+                                valid_report = False
+                            if check_name in {
+                                "subnational_scope",
+                                "subnational_decision",
+                            }:
+                                for field in ("owner", "checked_at"):
+                                    if not nonempty(report.get(field)):
+                                        issues.append(
+                                            f"{prefix}.path report.{field} is required"
+                                        )
+                                        valid_report = False
+                                if not valid_timestamp(report.get("checked_at")):
+                                    issues.append(
+                                        f"{prefix}.path report.checked_at must be an ISO-8601 timestamp"
+                                    )
+                                    valid_report = False
+                                if not nonempty(
+                                    report.get("decision_evidence")
+                                    or report.get("evidence")
+                                ):
+                                    issues.append(
+                                        f"{prefix}.path report decision evidence is required"
+                                    )
+                                    valid_report = False
+                                if reported_required is True:
+                                    for field in (
+                                        "target_admin_level",
+                                        "required_dataset_names",
+                                    ):
+                                        if not nonempty(report.get(field)):
+                                            issues.append(
+                                                f"{prefix}.path report.{field} is required"
+                                            )
+                                            valid_report = False
                         passing_report |= valid_report
         elif kind == "command":
             if not nonempty(item.get("command")):
@@ -349,6 +490,8 @@ def validate(manifest: dict, ready: bool, base: Path | None = None) -> list[str]
         if ready and (repo_path is None or not repo_path.is_dir()):
             issues.append(f"repositories.{repo}.path is not a local directory")
 
+    subnational = manifest.get("subnational") or {}
+    required = subnational.get("required")
     gates = manifest.get("gates") or {}
     missing_gates = sorted(REQUIRED_GATES - set(gates))
     if missing_gates:
@@ -368,32 +511,49 @@ def validate(manifest: dict, ready: bool, base: Path | None = None) -> list[str]
                     ready,
                     base,
                     inventory_digest if isinstance(inventory_digest, str) else None,
+                    required if isinstance(required, bool) else None,
                 )
             )
         if ready and name in REQUIRED_GATES and status != "passed":
             issues.append(f"gates.{name} is not release-ready: {status}")
 
-    subnational = manifest.get("subnational") or {}
-    required = subnational.get("required")
-    subnational_status = (gates.get("subnational") or {}).get("status")
-    if required not in {True, False, None} or (
-        required is None and (ready or subnational_status == "passed")
+    scope_status = (gates.get("subnational_scope") or {}).get("status")
+    data_status = (gates.get("subnational_data") or {}).get("status")
+    if (required is not None and not isinstance(required, bool)) or (
+        required is None
+        and (ready or scope_status == "passed" or data_status == "passed")
     ):
         issues.append("subnational.required must be true or false")
     if required is True:
-        if not nonempty(subnational.get("target_admin_level")):
+        if (
+            ready or scope_status == "passed" or data_status == "passed"
+        ) and not nonempty(subnational.get("target_admin_level")):
             issues.append(
                 "subnational.target_admin_level is required when subnational data are required"
             )
-        if not nonempty(subnational.get("target_units")):
+        if (
+            ready or scope_status == "passed" or data_status == "passed"
+        ) and not nonempty(subnational.get("required_dataset_names")):
+            issues.append(
+                "subnational.required_dataset_names is required when subnational data are required"
+            )
+        if (ready or data_status == "passed") and not nonempty(
+            subnational.get("target_units")
+        ):
             issues.append(
                 "subnational.target_units is required when subnational data are required"
             )
-        if not nonempty(subnational.get("sources")):
+        if (ready or data_status == "passed") and not nonempty(
+            subnational.get("sources")
+        ):
             issues.append(
                 "subnational.sources is required when subnational data are required"
             )
-    if required is False and not nonempty(subnational.get("decision_evidence")):
+    if (
+        required is False
+        and (ready or scope_status == "passed" or data_status == "passed")
+        and not nonempty(subnational.get("decision_evidence"))
+    ):
         issues.append(
             "subnational.decision_evidence is required for a central-only decision"
         )
@@ -510,6 +670,13 @@ def parser() -> argparse.ArgumentParser:
     init.add_argument("--source-inventory", type=Path)
     init.add_argument("--force", action="store_true")
     init.set_defaults(func=initialize)
+
+    migrate = sub.add_parser(
+        "upgrade", help="Create a schema-v5 manifest from an existing schema-v4 file"
+    )
+    migrate.add_argument("--manifest", type=Path, required=True)
+    migrate.add_argument("--output", type=Path, required=True)
+    migrate.set_defaults(func=upgrade)
 
     verify = sub.add_parser(
         "check", help="Validate manifest structure or release readiness"

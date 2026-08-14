@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "country": {
     "name": null,
     "iso2": null,
@@ -31,6 +31,7 @@
     "required": null,
     "decision_evidence": [],
     "target_admin_level": null,
+    "required_dataset_names": [],
     "target_units": [],
     "no_data_policy": "Preserve missing source coverage as no-data; do not fabricate, split, or merge values without an explicit reviewed decision.",
     "sources": [],
@@ -45,7 +46,12 @@
     "workbook_audit": {
       "status": "not_started",
       "evidence": [],
-      "next_action": "Run workbook_inventory.py and assign a role to every visible, hidden, and very-hidden sheet."
+      "next_action": "Run workbook_inventory.py, resolve formula cells without cached values, and assign a role to every visible, hidden, and very-hidden sheet."
+    },
+    "subnational_scope": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Decide central-only versus subnational; record the target admin level and required datasets when subnational data are needed."
     },
     "workbook_duplicates": {
       "status": "not_started",
@@ -67,10 +73,10 @@
       "evidence": [],
       "next_action": "Build or validate extraction, bronze, silver, and gold while preserving source-row identity and named measures."
     },
-    "subnational": {
+    "subnational_data": {
       "status": "not_started",
       "evidence": [],
-      "next_action": "Decide central-only versus subnational and produce reviewed decision or admin-coverage evidence."
+      "next_action": "For a subnational country, validate boundaries, required datasets, mappings, geometry, and no-data coverage; for central-only, reuse the reviewed scope decision."
     },
     "cross_country": {
       "status": "not_started",
