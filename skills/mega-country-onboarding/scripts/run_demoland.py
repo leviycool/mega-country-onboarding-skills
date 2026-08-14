@@ -15,10 +15,10 @@ from pathlib import Path
 from openpyxl import Workbook
 
 
-ROOT = Path(__file__).resolve().parents[1]
-ORCHESTRATOR = ROOT / "skills" / "mega-country-onboarding" / "scripts"
-BOOST = ROOT / "skills" / "mega-boost-onboarding" / "scripts"
-OVERCOUNTING = ROOT / "skills" / "mega-boost-overcounting" / "scripts"
+SUITE_ROOT = Path(__file__).resolve().parents[2]
+ORCHESTRATOR = Path(__file__).resolve().parent
+BOOST = SUITE_ROOT / "mega-boost-onboarding" / "scripts"
+OVERCOUNTING = SUITE_ROOT / "mega-boost-overcounting" / "scripts"
 NOW = "2026-01-01T00:00:00Z"
 
 

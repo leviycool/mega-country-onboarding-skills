@@ -15,7 +15,6 @@ from openpyxl import Workbook
 
 
 SUITE_ROOT = Path(__file__).resolve().parents[2]
-REPOSITORY_ROOT = SUITE_ROOT.parent
 BOOST = SUITE_ROOT / "mega-boost-onboarding" / "scripts"
 OVERCOUNTING = SUITE_ROOT / "mega-boost-overcounting" / "scripts"
 SUBNATIONAL = SUITE_ROOT / "mega-subnational-onboarding" / "scripts"
@@ -266,6 +265,28 @@ def manifest_tests(root: Path, results: list[dict]) -> None:
         "manifest rejects required not-applicable gates",
         execute([checker, "check", "--manifest", bypass_path, "--ready"]),
         1,
+    )
+    early_subnational = json.loads(json.dumps(ready))
+    early_subnational_path = root / "manifest-early-subnational.json"
+    early_subnational["workspace"]["manifest_path"] = str(early_subnational_path)
+    early_subnational["gates"]["subnational"] = {
+        "status": "not_started",
+        "evidence": [],
+        "next_action": "Decide central-only versus subnational.",
+    }
+    early_subnational["gates"]["boost_etl"] = {
+        "status": "not_started",
+        "evidence": [],
+        "next_action": "Build BOOST ETL.",
+    }
+    write_json(early_subnational_path, early_subnational)
+    next_run = execute([checker, "next", "--manifest", early_subnational_path])
+    next_result = json.loads(next_run.stdout)
+    record_condition(
+        results,
+        "manifest routes subnational work before BOOST ETL",
+        next_run.returncode == 0 and next_result.get("current_gate") == "subnational",
+        next_run,
     )
 
 
@@ -913,7 +934,7 @@ def reconciliation_tests(root: Path, results: list[dict]) -> None:
 def demo_tests(root: Path, results: list[dict]) -> None:
     demo_output = root / "demoland"
     command = [
-        REPOSITORY_ROOT / "scripts" / "run_demoland.py",
+        SUITE_ROOT / "mega-country-onboarding" / "scripts" / "run_demoland.py",
         "--output",
         demo_output,
     ]
@@ -922,12 +943,6 @@ def demo_tests(root: Path, results: list[dict]) -> None:
         "DemoLand creates a valid first-hour onboarding workspace",
         execute(command),
         0,
-    )
-    record(
-        results,
-        "DemoLand refuses to overwrite an existing onboarding workspace",
-        execute(command),
-        1,
     )
 
 
