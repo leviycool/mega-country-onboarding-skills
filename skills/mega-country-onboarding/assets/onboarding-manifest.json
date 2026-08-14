@@ -37,17 +37,61 @@
     "mappings": []
   },
   "gates": {
-    "intake": {"status": "not_started", "evidence": [], "next_action": null},
-    "workbook_audit": {"status": "not_started", "evidence": [], "next_action": null},
-    "workbook_duplicates": {"status": "not_started", "evidence": [], "next_action": null},
-    "overcounting": {"status": "not_started", "evidence": [], "next_action": null},
-    "foreign_funding": {"status": "not_started", "evidence": [], "next_action": null},
-    "boost_etl": {"status": "not_started", "evidence": [], "next_action": null},
-    "subnational": {"status": "not_started", "evidence": [], "next_action": null},
-    "cross_country": {"status": "not_started", "evidence": [], "next_action": null},
-    "dashboard": {"status": "not_started", "evidence": [], "next_action": null},
-    "staging": {"status": "not_started", "evidence": [], "next_action": null},
-    "production": {"status": "not_started", "evidence": [], "next_action": null}
+    "intake": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Validate the source inventory and resolve authority, scope, years, stages, currency, units, or access blockers."
+    },
+    "workbook_audit": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Run workbook_inventory.py and assign a role to every visible, hidden, and very-hidden sheet."
+    },
+    "workbook_duplicates": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Configure and run check_workbook_duplicates.py for every workbook sheet."
+    },
+    "overcounting": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Extract complete formula rules and run the overlap detector with expected stage and code coverage."
+    },
+    "foreign_funding": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Define an independent raw-field predicate for is_foreign and run the row and amount conservation check."
+    },
+    "boost_etl": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Build or validate extraction, bronze, silver, and gold while preserving source-row identity and named measures."
+    },
+    "subnational": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Decide central-only versus subnational and produce reviewed decision or admin-coverage evidence."
+    },
+    "cross_country": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Register the country and reconcile country gold with the cross-country aggregate at the declared grain."
+    },
+    "dashboard": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Validate selector, years, totals, dimensions, maps, narratives, source metadata, and no-data behavior against query output."
+    },
+    "staging": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Run the country and aggregate pipelines in staging and validate produced tables and dashboard data."
+    },
+    "production": {
+      "status": "not_started",
+      "evidence": [],
+      "next_action": "Obtain explicit production authority, run the approved release, and repeat material table and dashboard checks."
+    }
   },
   "decisions": [],
   "risks": [],
