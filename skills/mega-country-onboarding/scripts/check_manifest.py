@@ -42,11 +42,11 @@ REQUIRED_GATES = {
 GATE_ORDER = (
     "intake",
     "workbook_audit",
+    "subnational",
     "workbook_duplicates",
     "overcounting",
     "foreign_funding",
     "boost_etl",
-    "subnational",
     "cross_country",
     "dashboard",
     "staging",

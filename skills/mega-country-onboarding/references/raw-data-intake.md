@@ -17,7 +17,7 @@ A converted XLSX is not a new authority when it only exposes formulas from an OD
 
 ## Build the source inventory
 
-For a new country, run `scripts/start_country.py` first. It creates a one-workbook inventory, hashes the source, captures clean repository baselines, validates intake, and creates the manifest without overwriting prior work. Then add every additional source to the generated inventory and record:
+For a new country, run `scripts/start_country.py` first. It creates a validated one-workbook inventory and manifest without overwriting prior work. Use [../assets/source-inventory.example.json](../assets/source-inventory.example.json) as the field-level example when adding the remaining sources:
 
 - country name and ISO codes;
 - stages and expected years;
