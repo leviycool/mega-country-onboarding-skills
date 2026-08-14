@@ -15,6 +15,7 @@ from openpyxl import Workbook
 
 
 SUITE_ROOT = Path(__file__).resolve().parents[2]
+REPOSITORY_ROOT = SUITE_ROOT.parent
 BOOST = SUITE_ROOT / "mega-boost-onboarding" / "scripts"
 OVERCOUNTING = SUITE_ROOT / "mega-boost-overcounting" / "scripts"
 SUBNATIONAL = SUITE_ROOT / "mega-subnational-onboarding" / "scripts"
@@ -909,6 +910,27 @@ def reconciliation_tests(root: Path, results: list[dict]) -> None:
     )
 
 
+def demo_tests(root: Path, results: list[dict]) -> None:
+    demo_output = root / "demoland"
+    command = [
+        REPOSITORY_ROOT / "scripts" / "run_demoland.py",
+        "--output",
+        demo_output,
+    ]
+    record(
+        results,
+        "DemoLand creates a valid first-hour onboarding workspace",
+        execute(command),
+        0,
+    )
+    record(
+        results,
+        "DemoLand refuses to overwrite an existing onboarding workspace",
+        execute(command),
+        1,
+    )
+
+
 def main() -> int:
     results: list[dict] = []
     with tempfile.TemporaryDirectory(prefix="mega-onboarding-regression-") as temp:
@@ -920,6 +942,7 @@ def main() -> int:
         overcounting_tests(root, results)
         subnational_tests(root, results)
         reconciliation_tests(root, results)
+        demo_tests(root, results)
     report = {
         "passed": all(item["passed"] for item in results),
         "tests": len(results),

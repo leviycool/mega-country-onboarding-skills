@@ -40,6 +40,40 @@ The release gates cover:
 | `mega-subnational-onboarding` | Decide and validate geography, boundaries, population, and indicators |
 | `mega-onboarding-validation` | Reconcile the connected system and collect release evidence |
 
+## Internal quick start
+
+Keep the three working repositories under one clean parent directory. Then create the first-hour onboarding record directly from the authoritative workbook:
+
+```bash
+python skills/mega-country-onboarding/scripts/start_country.py \
+  --country "<country>" --iso2 <ISO2> --iso3 <ISO3> \
+  --workbook "/approved/source/snapshot.xlsx" \
+  --source-owner "<team or source owner>" \
+  --year 2023 --year 2024 \
+  --stage approved --stage executed \
+  --currency "<currency>" --amount-unit "<unit>" \
+  --fiscal-year-convention "<convention>" \
+  --repo-root "/path/to/wb-mb" \
+  --workspace "/path/to/wb-mb/onboarding/<iso3-lower>"
+```
+
+The command refuses to overwrite an existing onboarding record or start from a dirty repository. It hashes the workbook, records all three baseline SHAs, validates the source inventory, marks intake passed, and leaves one concrete next action in the manifest.
+
+Resume with:
+
+```bash
+python skills/mega-country-onboarding/scripts/check_manifest.py next \
+  --manifest "/path/to/onboarding/<iso3-lower>/onboarding-manifest.json"
+```
+
+To see the local workflow before touching country data, run the synthetic DemoLand preflight:
+
+```bash
+python scripts/run_demoland.py --output /tmp/mega-demoland
+```
+
+It exercises intake, workbook inventory, duplicate coverage, overcounting, independent foreign-funding logic, and the subnational decision. It deliberately stops before live BOOST ETL, Databricks, dashboard, staging, or production work.
+
 ## Install
 
 Copy the skill directories into your Codex skills directory:

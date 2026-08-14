@@ -12,24 +12,27 @@ Run the onboarding as one delivery, even though the work spans several repositor
 1. Read [references/workflow.md](references/workflow.md), [references/raw-data-intake.md](references/raw-data-intake.md), [references/repository-map.md](references/repository-map.md), and [references/evidence-contract.md](references/evidence-contract.md).
 2. Locate `mega-boost`, `mega-indicators`, and `rpf-country-dash`. Read their current instructions and inspect their status before editing.
 3. Verify the baseline branch or ref in each repository. Similar countries are useful examples only after the current source structure is understood.
-4. Create `onboarding/<iso3-lower>/source-inventory.json` from [assets/source-inventory.example.json](assets/source-inventory.example.json). Include the workbook, original raw files, dictionaries, and any geographic or indicator sources already in scope.
-5. Run `scripts/check_source_inventory.py` and save the report under the onboarding folder.
-6. Create or resume `onboarding/<iso3-lower>/onboarding-manifest.json`. Use schema version 4 and typed evidence from the evidence contract.
+4. For a new onboarding, run `scripts/start_country.py` to create the source inventory, intake report, and schema-v4 manifest in one validated step. The script must start from clean repository baselines and refuses to replace an existing onboarding record.
+5. Add original raw files, dictionaries, and any geographic or indicator sources already in scope to the generated source inventory, then rerun `scripts/check_source_inventory.py` after every inventory change.
+6. For an existing onboarding, resume its manifest rather than bootstrapping another workspace.
 7. Capture workbook and source hashes, repository SHAs, existing country tables, pipeline registrations, and dashboard state before changing anything.
 
 Run a fast source triage before adding country code to a repository: duplicate row identity, formula/cached-value coverage, foreign-funding semantics, published-total reconciliation, and the subnational decision. If one of these changes source identity or business meaning, keep diagnostic extracts and helpers in the onboarding workspace and stop production implementation until the owner resolves it.
 
-Initialize a manifest with:
+Start a country with:
 
 ```bash
-python scripts/check_manifest.py init \
-  --template assets/onboarding-manifest.json \
-  --output <onboarding-manifest.json> \
+python scripts/start_country.py \
   --country <name> --iso2 <ISO2> --iso3 <ISO3> \
-  --workspace <workspace> \
-  --workbook <local-workbook-snapshot> \
-  --source-inventory <source-inventory.json>
+  --workbook <local-workbook-snapshot> --source-owner <owner> \
+  --year <year> --stage <approved|revised|executed> \
+  --currency <currency> --amount-unit <unit> \
+  --fiscal-year-convention <convention> \
+  --repo-root <parent-of-the-three-repositories> \
+  --workspace <onboarding-workspace>
 ```
+
+Use `scripts/check_manifest.py init` only when reconstructing a manifest around an already-reviewed inventory. After every work session, run `scripts/check_manifest.py next --manifest <onboarding-manifest.json>` and leave its first incomplete gate with an executable `next_action`.
 
 Ask for input only when the answer cannot be established safely from source or code: competing authoritative files, ambiguous fiscal or geographic meaning, category ownership, permission to edit the workbook, approval of an approximation, or authority to run production.
 
@@ -79,6 +82,12 @@ Run the structural check while working:
 
 ```bash
 python scripts/check_manifest.py check --manifest <onboarding-manifest.json>
+```
+
+Show the next incomplete standard gate:
+
+```bash
+python scripts/check_manifest.py next --manifest <onboarding-manifest.json>
 ```
 
 Run it with `--ready` only for release. Every standard gate must be `passed`; a central-only country passes subnational with a reviewed decision report rather than `not_applicable`.

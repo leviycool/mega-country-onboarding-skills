@@ -39,6 +39,19 @@ REQUIRED_GATES = {
     "staging",
     "production",
 }
+GATE_ORDER = (
+    "intake",
+    "workbook_audit",
+    "workbook_duplicates",
+    "overcounting",
+    "foreign_funding",
+    "boost_etl",
+    "subnational",
+    "cross_country",
+    "dashboard",
+    "staging",
+    "production",
+)
 
 
 def load_json(path: Path) -> dict:
@@ -362,7 +375,10 @@ def validate(manifest: dict, ready: bool, base: Path | None = None) -> list[str]
 
     subnational = manifest.get("subnational") or {}
     required = subnational.get("required")
-    if required not in {True, False}:
+    subnational_status = (gates.get("subnational") or {}).get("status")
+    if required not in {True, False, None} or (
+        required is None and (ready or subnational_status == "passed")
+    ):
         issues.append("subnational.required must be true or false")
     if required is True:
         if not nonempty(subnational.get("target_admin_level")):
@@ -437,6 +453,46 @@ def check(args: argparse.Namespace) -> int:
     return 1 if issues else 0
 
 
+def next_step(args: argparse.Namespace) -> int:
+    manifest = load_json(args.manifest)
+    issues = validate(manifest, False, args.manifest.resolve().parent)
+    gates = manifest.get("gates")
+    if not isinstance(gates, dict):
+        gates = {}
+    current_gate = next(
+        (
+            name
+            for name in GATE_ORDER
+            if (gates.get(name) or {}).get("status") != "passed"
+        ),
+        None,
+    )
+    gate = gates.get(current_gate) or {} if current_gate else {}
+    risks = manifest.get("risks")
+    if not isinstance(risks, list):
+        risks = []
+    blocking_risks = [
+        risk
+        for risk in risks
+        if isinstance(risk, dict)
+        and risk.get("release_blocking") is True
+        and risk.get("status") not in {"resolved", "accepted"}
+    ]
+    result = {
+        "manifest": str(args.manifest),
+        "structurally_valid": not issues,
+        "current_gate": current_gate,
+        "status": gate.get("status") if current_gate else "all_standard_gates_passed",
+        "next_action": gate.get("next_action")
+        if current_gate
+        else (manifest.get("handoff") or {}).get("next_action"),
+        "blocking_risks": blocking_risks,
+        "issues": issues,
+    }
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 1 if issues else 0
+
+
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description=__doc__)
     sub = root.add_subparsers(dest="command", required=True)
@@ -461,6 +517,12 @@ def parser() -> argparse.ArgumentParser:
     verify.add_argument("--manifest", type=Path, required=True)
     verify.add_argument("--ready", action="store_true")
     verify.set_defaults(func=check)
+
+    next_command = sub.add_parser(
+        "next", help="Show the first incomplete standard gate and its next action"
+    )
+    next_command.add_argument("--manifest", type=Path, required=True)
+    next_command.set_defaults(func=next_step)
     return root
 
 
